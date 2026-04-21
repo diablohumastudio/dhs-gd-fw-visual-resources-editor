@@ -1,0 +1,22 @@
+[gd_scene format=3 uid="uid://bkuj0fqxrjoj8"]
+
+[ext_resource type="Script" uid="uid://dodeyqrfb0lsj" path="res://addons/diablohumastudio/visual_resources_editor/ui/class_selector/class_selector.gd" id="1_cls"]
+
+[node name="ClassSelector" type="HBoxContainer" unique_id=2105379804]
+size_flags_horizontal = 3
+script = ExtResource("1_cls")
+
+[node name="Label" type="Label" parent="." unique_id=529713665]
+layout_mode = 2
+text = "Class:"
+
+[node name="ClassDropdown" type="OptionButton" parent="." unique_id=161410134]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+selected = 0
+item_count = 1
+popup/item_0/text = "-- Select a class --"
+popup/item_0/id = 0
+
+[connection signal="item_selected" from="ClassDropdown" to="." method="_on_class_dropdown_item_selected"]
