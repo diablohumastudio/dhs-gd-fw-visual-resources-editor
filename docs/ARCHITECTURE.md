@@ -22,10 +22,9 @@ visual_resources_editor/
 │   ├── vre_model.gd                    # VREModel: facade / coordinator — single entry point for all VMs
 │   ├── state_manager.gd                # VREStateManager: thin proxy kept for migration compatibility
 │   ├── class_registry.gd              # Project class scanning and metadata
-│   ├── resource_repository.gd         # .tres file loading, mtime diffing, saving
+│   ├── resource_repository.gd         # .tres loading/saving; applies FileSystemMonitor ChangeSets
 │   ├── selection_manager.gd           # Multi-select logic (single / ctrl / shift)
 │   ├── pagination_manager.gd          # Page arithmetic and page-slice extraction
-│   ├── editor_filesystem_listener.gd  # Filesystem change events (debounced)
 │   ├── project_class_scanner.gd       # Static utility: scans project classes and .tres files
 │   └── bulk_editor.gd                 # BulkEditor: inspector proxy creation and bulk property write-back
 ├── view_models/                        # ViewModel layer
@@ -76,7 +75,9 @@ visual_resources_editor/
 
 - **`VREModel`** is the single facade all ViewModels talk to. It instantiates
   and coordinates `ClassRegistry`, `ResourceRepository`, `SelectionManager`,
-  `PaginationManager`, `EditorFileSystemListener`, and `SessionStateModel`.
+  `PaginationManager`, and `SessionStateModel`. Filesystem change events come
+  from the FileSystemMonitor plugin (`DH_FileSystemMonitorPlugin.instance`),
+  which `ResourceRepository` subscribes to.
   Internal coordination (e.g. class change → resource reload) happens inside
   `VREModel`, invisible to VMs.
 

@@ -37,25 +37,33 @@ var include_subclasses: bool = true:
 			_reload()
 
 var current_class_resources: Array[Resource] = []
-var _mtimes: Dictionary[String, int] = {}
 var _current_class_props: Array[DH_VRE_ResourceProperty] = []
-var _fs_listener: DH_VRE_EditorFileSystemListener
 
 
 func _init(p_class_registry: DH_VRE_ResourceClassMap = null) -> void:
 	class_registry = p_class_registry if p_class_registry else DH_VRE_ResourceClassMap.new()
-	_fs_listener = DH_VRE_EditorFileSystemListener.new()
-	_fs_listener.script_classes_updated.connect(_on_script_classes_updated)
-	_fs_listener.filesystem_changed.connect(_on_filesystem_changed)
 
 
 func start() -> void:
-	_fs_listener.start()
 	class_registry.rebuild()
+	var monitor: DH_FileSystemMonitorPlugin = DH_FileSystemMonitorPlugin.instance
+	if monitor == null:
+		push_error("VRE: FileSystemMonitor plugin is not enabled — live refresh disabled.")
+		return
+	if not monitor.changes_detected.is_connected(_on_files_changed):
+		monitor.changes_detected.connect(_on_files_changed)
+	if not monitor.script_classes_updated.is_connected(_on_script_classes_updated):
+		monitor.script_classes_updated.connect(_on_script_classes_updated)
 
 
 func stop() -> void:
-	_fs_listener.stop()
+	var monitor: DH_FileSystemMonitorPlugin = DH_FileSystemMonitorPlugin.instance
+	if monitor == null:
+		return
+	if monitor.changes_detected.is_connected(_on_files_changed):
+		monitor.changes_detected.disconnect(_on_files_changed)
+	if monitor.script_classes_updated.is_connected(_on_script_classes_updated):
+		monitor.script_classes_updated.disconnect(_on_script_classes_updated)
 
 
 func reload() -> void:
@@ -65,50 +73,117 @@ func reload() -> void:
 ## Full reload for the given class names. Always emits resources_reseted.
 func load_resources(class_names: Array[String]) -> void:
 	current_class_resources = DH_VRE_ProjectClassScanner.load_classed_resources_from_dir(class_names)
-	_rebuild_mtimes()
 	resources_reseted.emit(current_class_resources.duplicate())
 
 
-## Incremental scan: compares current filesystem state against the cached mtimes.
-## Emits resources_changed only if something changed; silent otherwise.
-func scan_for_changes(class_names: Array[String]) -> void:
-	var updated: Array[Resource] = current_class_resources.duplicate()
-	var current_paths: Array[String] = DH_VRE_ProjectClassScanner.scan_folder_for_classed_tres_paths(class_names)
+## Incremental update from a monitor ChangeSet: filters the already-computed
+## changes to watched .tres and applies them — no rescan, no mtime cache.
+## Emits resources_changed only if something watched changed; silent otherwise.
+func _on_files_changed(changes: DH_FSM_ChangeSet) -> void:
+	if selected_class.is_empty():
+		return
+	var watched_classes: Array[String] = class_registry.get_descendant_classes(selected_class, include_subclasses)
 	var added: Array[Resource] = []
 	var removed: Array[Resource] = []
 	var modified: Array[Resource] = []
 
-	for path: String in current_paths:
-		var mtime: int = FileAccess.get_modified_time(path)
-		if not _mtimes.has(path):
-			var res: Resource = ResourceLoader.load(path, "", ResourceLoader.CACHE_MODE_REPLACE)
-			if res:
-				updated.append(res)
-				added.append(res)
-		elif mtime != _mtimes[path]:
-			var res: Resource = ResourceLoader.load(path, "", ResourceLoader.CACHE_MODE_REPLACE)
-			if res:
-				for i: int in updated.size():
-					if updated[i].resource_path == path:
-						updated[i] = res
-						break
-				modified.append(res)
-
-	var known_paths: Array = _mtimes.keys()
-	for path: String in known_paths:
-		if not current_paths.has(path):
-			for i: int in updated.size():
-				if updated[i].resource_path == path:
-					removed.append(updated[i])
-					updated.remove_at(i)
-					break
+	for file_path: String in changes.created_file_paths:
+		_collect_created(file_path, watched_classes, added)
+	for file_path: String in changes.modified_file_paths:
+		_collect_modified(file_path, watched_classes, added, removed, modified)
+	for file_path: String in changes.deleted_file_paths:
+		_collect_deleted(file_path, removed)
+	for move: DH_FSM_Move in changes.moved_files:
+		_collect_moved(move, watched_classes, added, removed)
 
 	if added.is_empty() and removed.is_empty() and modified.is_empty():
 		return
 
-	current_class_resources = updated
-	_rebuild_mtimes()
+	_apply_to_current(added, removed, modified)
 	resources_changed.emit(added, removed, modified)
+
+
+func _collect_created(file_path: String, watched_classes: Array[String], added: Array[Resource]) -> void:
+	if not _is_watched_tres(file_path, watched_classes):
+		return
+	var res: Resource = _load_fresh(file_path)
+	if res:
+		added.append(res)
+
+
+## A modified file can also enter or leave the watched set when its script_class
+## changed on disk: unwatched-now but tracked -> removal; watched-now but
+## untracked -> addition; otherwise a plain refresh.
+func _collect_modified(
+		file_path: String,
+		watched_classes: Array[String],
+		added: Array[Resource],
+		removed: Array[Resource],
+		modified: Array[Resource]
+		) -> void:
+	var tracked: Resource = _find_loaded(file_path)
+	if not _is_watched_tres(file_path, watched_classes):
+		if tracked:
+			removed.append(tracked)
+		return
+	var res: Resource = _load_fresh(file_path)
+	if res == null:
+		return
+	if tracked == null:
+		added.append(res)
+	else:
+		modified.append(res)
+
+
+func _collect_deleted(file_path: String, removed: Array[Resource]) -> void:
+	var tracked: Resource = _find_loaded(file_path)
+	if tracked:
+		removed.append(tracked)
+
+
+## A move out of the watched set = removal; into it = addition; within = both
+## (old instance out, fresh instance at the new path in). The to_path fallback
+## covers dock moves where the editor already updated the cached resource_path.
+func _collect_moved(move: DH_FSM_Move, watched_classes: Array[String], added: Array[Resource], removed: Array[Resource]) -> void:
+	var tracked: Resource = _find_loaded(move.from_path)
+	if tracked == null:
+		tracked = _find_loaded(move.to_path)
+	if tracked:
+		removed.append(tracked)
+	if _is_watched_tres(move.to_path, watched_classes):
+		var res: Resource = _load_fresh(move.to_path)
+		if res:
+			added.append(res)
+
+
+func _is_watched_tres(file_path: String, watched_classes: Array[String]) -> bool:
+	if file_path.begins_with("res://addons/") or not file_path.ends_with(".tres"):
+		return false
+	return watched_classes.has(DH_VRE_ProjectClassScanner.get_class_from_tres_file(file_path))
+
+
+func _load_fresh(file_path: String) -> Resource:
+	return ResourceLoader.load(file_path, "", ResourceLoader.CACHE_MODE_REPLACE)
+
+
+func _find_loaded(file_path: String) -> Resource:
+	for res: Resource in current_class_resources:
+		if res.resource_path == file_path:
+			return res
+	return null
+
+
+func _apply_to_current(added: Array[Resource], removed: Array[Resource], modified: Array[Resource]) -> void:
+	for res: Resource in removed:
+		current_class_resources.erase(res)
+	for res: Resource in modified:
+		for i: int in current_class_resources.size():
+			if current_class_resources[i].resource_path == res.resource_path:
+				current_class_resources[i] = res
+				break
+	for res: Resource in added:
+		if not current_class_resources.has(res):
+			current_class_resources.append(res)
 
 
 ## Resaves all current resources (used on property schema change).
@@ -126,10 +201,8 @@ func resave_resources(resources: Array[Resource]) -> void:
 ## Looks up a loaded resource by path. Falls back to ResourceLoader.load
 ## if the path isn't in current_class_resources.
 func get_by_path(path: String) -> Resource:
-	for res: Resource in current_class_resources:
-		if res.resource_path == path:
-			return res
-	return ResourceLoader.load(path)
+	var tracked: Resource = _find_loaded(path)
+	return tracked if tracked else ResourceLoader.load(path)
 
 
 ## Instantiates a resource from `script` and saves it at `path`.
@@ -138,11 +211,13 @@ func create(script: GDScript, path: String) -> Error:
 	if script == null:
 		error_occurred.emit("Script is null; cannot create resource.")
 		return ERR_INVALID_PARAMETER
-	if not script.can_instantiate():
-		var class_name_: String = script.get_global_name()
-		error_occurred.emit("Can't instantiate %s.\nCheck its constructor." % class_name_)
+	# can_instantiate() is false in-editor for every non-@tool script, so try
+	# to instantiate and null-check instead (covers invalid scripts and
+	# constructors with required arguments).
+	var instance: Resource = script.new() as Resource
+	if instance == null:
+		error_occurred.emit("Can't instantiate %s.\nCheck its constructor." % script.get_global_name())
 		return ERR_CANT_CREATE
-	var instance: Resource = script.new()
 	var err: Error = ResourceSaver.save(instance, path)
 	if err != OK:
 		error_occurred.emit("Failed to save resource:\n%s" % path)
@@ -220,13 +295,11 @@ func get_paths() -> Array[String]:
 
 func clear() -> void:
 	current_class_resources.clear()
-	_mtimes.clear()
 
 
 func _reload() -> void:
 	if selected_class.is_empty():
 		current_class_resources.clear()
-		_mtimes.clear()
 		resources_reseted.emit(Array([], TYPE_OBJECT, "Resource", null))
 		return
 	_current_class_props = class_registry.get_properties_from_class_name(selected_class).duplicate()
@@ -283,15 +356,7 @@ func _on_current_class_props_changed(new_props: Array[DH_VRE_ResourceProperty]) 
 func _reload_fresh() -> void:
 	var included: Array[String] = class_registry.get_descendant_classes(selected_class, include_subclasses)
 	current_class_resources = DH_VRE_ProjectClassScanner.load_classed_resources_from_dir(included)
-	_rebuild_mtimes()
 	resources_reseted.emit(current_class_resources.duplicate())
-
-
-func _on_filesystem_changed() -> void:
-	if selected_class.is_empty():
-		return
-	var included: Array[String] = class_registry.get_descendant_classes(selected_class, include_subclasses)
-	scan_for_changes(included)
 
 
 func _resave_orphaned(previous: Array[String], current: Array[String]) -> void:
@@ -303,9 +368,3 @@ func _resave_orphaned(previous: Array[String], current: Array[String]) -> void:
 		return
 	var orphaned: Array[Resource] = DH_VRE_ProjectClassScanner.load_classed_resources_from_dir(removed_classes)
 	resave_resources(orphaned)
-
-
-func _rebuild_mtimes() -> void:
-	_mtimes.clear()
-	for res: Resource in current_class_resources:
-		_mtimes[res.resource_path] = FileAccess.get_modified_time(res.resource_path)

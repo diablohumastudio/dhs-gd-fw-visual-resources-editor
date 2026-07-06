@@ -3,6 +3,9 @@
 ## Description
 The Visual Resources Editor is a Godot 4 `@tool` editor plugin designed for visually browsing, creating, bulk-editing, and deleting `.tres` resource files filtered by their script class. It provides a streamlined, tabular interface for managing large numbers of data-driven resources directly within the Godot editor, avoiding the need to manually hunt through the FileSystem dock.
 
+## Requirements
+Depends on the **FileSystemMonitor** plugin (`addons/diablohumastudio_framework/file_system_monitor`) being enabled: live table refresh subscribes to its `changes_detected` ChangeSets instead of maintaining its own filesystem mtime cache. Without it the editor still works, but the table won't react to filesystem changes (a `push_error` is raised on launch).
+
 ## User Manual
 1. **Launch**: Open the plugin from the editor toolbar via **VisualResourcesEditor → Launch Visual Editor**.
 2. **Selecting Classes**: Use the top-left **Class Selector** dropdown to filter your project's `.tres` resources by their specific GDScript class.

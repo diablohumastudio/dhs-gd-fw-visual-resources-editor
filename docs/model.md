@@ -2,6 +2,11 @@
 
 Based on a review of the actual code in `addons/diablohumastudio/visual_resources_editor`, the system follows a structured **MVVM (Model-View-ViewModel)** architecture tailored for the Godot Engine.
 
+> **Note (2026-07):** `EditorFileSystemListener` was removed. Filesystem change events now come
+> from the external **FileSystemMonitor** plugin (`addons/diablohumastudio_framework/file_system_monitor`),
+> whose `changes_detected` ChangeSets `ResourceRepository` subscribes to directly. Mentions of the
+> listener below are kept for historical context of the analysis.
+
 ## 1. Architectural Layers
 
 The editor is separated into three distinct layers to keep data, logic, and presentation decoupled.
@@ -11,7 +16,7 @@ Located in `core/` and `core/data_models/`, this layer handles the business logi
 *   **`SessionStateModel` (`core/data_models/session_state_model.gd`)**: Acts as the central hub for the editor's reactive state. It stores the currently selected class, active filters, and pagination state.
 *   **`ResourceRepository` (`core/resource_repository.gd`)**: Manages the lifecycle of Godot Resources. It is responsible for scanning the filesystem, loading resources into memory, and saving them.
 *   **`ClassRegistry` (`core/class_registry.gd`)**: Scans the project for script-defined classes to populate the editor's class selection options.
-*   **`EditorFileSystemListener` (`core/editor_filesystem_listener.gd`)**: Hooks into Godot's `EditorFileSystem` signals to ensure the editor stays in sync with external file changes (e.g., if a file is modified outside the editor).
+*   **FileSystemMonitor plugin (external, `addons/diablohumastudio_framework/file_system_monitor`)**: Supplies granular filesystem change events (`changes_detected` ChangeSets and `script_classes_updated`) that keep the editor in sync with file changes made inside or outside the editor. Replaced the old `EditorFileSystemListener`.
 
 ### ViewModel Layer
 Located in the `view_models/` directory, these classes bridge the Core logic and the UI.
