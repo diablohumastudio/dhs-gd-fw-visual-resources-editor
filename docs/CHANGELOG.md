@@ -55,6 +55,10 @@ here with their original numbers; those files track open items only.
   it per instance). *(resolves FIXES #13)*
 - Shadow counters removed: `ResourceListVM` recomputes counts from the
   pagination manager on every emit. *(resolves FIXES #23)*
+- Bulk-edit multi-select is safe with mixed scripts: the inspector proxy is
+  built from the common base-class script (only shared properties exposed) and
+  only the edited property is written to the selected resources.
+  *(resolves FIXES #16)*
 
 ### Removed
 - Dead code: `class_definition.gd`, `StatusLabelVM`/`PaginationBarVM`,

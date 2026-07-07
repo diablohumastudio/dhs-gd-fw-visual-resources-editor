@@ -49,22 +49,6 @@ bulk-editing can write the wrong type.
 
 ---
 
-### 16. BulkEditor Multi-Select Proxy May Corrupt Data
-
-**Problem:** With mixed scripts selected, `_get_common_script()` falls back to
-the selected class's base script and the proxy is created with default values
-(values are only copied for single selection). Untouched proxy properties hold
-defaults that can be written to all resources.
-
-**Fix:** Only expose properties shared across all selected scripts, or disable
-editing with a warning when scripts differ.
-
-**References:**
-- `model/bulk_editor.gd:61-78` (proxy creation)
-- `model/bulk_editor.gd:92-97` (common-script fallback)
-
----
-
 ### 17. UI Node Thrashing (No Object Pooling)
 
 **Problem:** `ResourceList` / `ResourceRow` rebuild all rows and cells with
