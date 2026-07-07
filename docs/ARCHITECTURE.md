@@ -7,141 +7,153 @@ A Godot 4 `@tool` editor plugin for visually browsing, creating, bulk-editing, a
 ## Architecture Overview
 
 The plugin follows an **MVVM (Model-View-ViewModel)** architecture. Views bind to
-ViewModels; ViewModels read from and write to `VREModel` (the Model facade).
-No View or ViewModel holds a reference to any other View or ViewModel.
+ViewModels; ViewModels read from and write to the Model layer, whose hub is
+`DH_VRE_ResourceRepository`. There is no extra facade between ViewModels and the
+repository.
 
 ```text
 visual_resources_editor/
-├── visual_resources_editor_plugin.gd   # EditorPlugin entry point (adds toolbar menu)
-├── visual_resources_editor_toolbar.gd  # Toolbar menu: instantiates the editor window
-├── core/                               # Model layer
-│   ├── data_models/
-│   │   ├── session_state_model.gd      # Shared session state (selected class, selection, page, filters)
-│   │   ├── resource_property.gd        # Typed data model for a single property definition
-│   │   └── class_definition.gd         # Typed data model for a class (name, path, properties)
-│   ├── vre_model.gd                    # VREModel: facade / coordinator — single entry point for all VMs
-│   ├── state_manager.gd                # VREStateManager: thin proxy kept for migration compatibility
-│   ├── class_registry.gd              # Project class scanning and metadata
-│   ├── resource_repository.gd         # .tres loading/saving; applies FileSystemMonitor ChangeSets
-│   ├── selection_manager.gd           # Multi-select logic (single / ctrl / shift)
-│   ├── pagination_manager.gd          # Page arithmetic and page-slice extraction
-│   ├── project_class_scanner.gd       # Static utility: scans project classes and .tres files
-│   └── bulk_editor.gd                 # BulkEditor: inspector proxy creation and bulk property write-back
-├── view_models/                        # ViewModel layer
+├── plugin.cfg
+├── visual_resources_editor_plugin.gd      # EditorPlugin entry point (peer-dep check + toolbar menu)
+├── visual_resources_editor_toolbar.gd     # PopupMenu: instantiates/focuses the editor window
+├── visual_resources_editor_window.gd/.tscn # Composition root: creates the repository and all VMs
+├── model/                                  # Model layer
+│   ├── resource_repository.gd             # Hub: selected class state, CRUD, live refresh from ChangeSets
+│   ├── resource_class_map.gd              # Class name ↔ script path ↔ parent maps; property extraction
+│   ├── project_class_scanner.gd           # Static utility: scans .tres files by script_class
+│   ├── resource_sorter.gd                 # Static utility: type-aware column sorting
+│   ├── selection_manager.gd               # Multi-select logic (single / ctrl / shift + anchor)
+│   ├── pagination_manager.gd              # Page arithmetic and page-slice extraction (50/page)
+│   ├── bulk_editor.gd                     # Node: inspector proxy + debounced bulk write-back
+│   └── resource_property.gd               # Typed data model for a single property definition
+├── viewmodel/                              # ViewModel layer (all RefCounted)
 │   ├── class_selector_vm.gd
 │   ├── subclass_filter_vm.gd
 │   ├── toolbar_vm.gd
-│   ├── resource_list_vm.gd
-│   ├── resource_row_vm.gd
-│   ├── pagination_bar_vm.gd
-│   ├── status_label_vm.gd
+│   ├── resource_list_vm.gd                # Composes SelectionManager + PaginationManager + sorter
+│   ├── resource_row_vm.gd                 # Per-row VM; selection state pushed in by the list VM
 │   ├── save_resource_dialog_vm.gd
 │   ├── confirm_delete_dialog_vm.gd
 │   └── error_dialog_vm.gd
-├── ui/                                 # View layer
-│   ├── visual_resources_editor_window.gd/.tscn  # Main Window: creates VMs and injects them into Views
-│   ├── class_selector/
-│   │   └── class_selector.gd/.tscn     # Class dropdown selector
-│   ├── subclass_filter/
-│   │   └── subclass_filter.gd/.tscn    # "Include subclasses" checkbox + warning label
-│   ├── toolbar/
-│   │   └── toolbar.gd/.tscn            # VREToolbar: New / Delete Selected / Refresh buttons
+├── view/                                   # View layer (@tool scenes/scripts)
+│   ├── class_selector/class_selector.gd/.tscn
+│   ├── subclass_filter/subclass_filter.gd/.tscn
+│   ├── toolbar/toolbar.gd/.tscn
 │   ├── resource_list/
-│   │   ├── resource_list.gd/.tscn      # Table container: header + scrollable rows
-│   │   ├── header_row.gd/.tscn         # Column header labels
-│   │   ├── resource_row.gd/.tscn       # One row per resource (binds to ResourceRowVM)
-│   │   ├── resource_field_label.gd/.tscn  # Label for a single property cell
-│   │   ├── header_field_label.tscn      # Label for a single header cell
-│   │   └── field_separator.tscn         # VSeparator between columns
-│   ├── pagination_bar/
-│   │   └── pagination_bar.gd/.tscn     # Prev/Next page buttons + page label
-│   ├── status_label.gd                 # Script-only Label: shows resource count or selection count
+│   │   ├── resource_list.gd/.tscn         # Table container; hosts %BulkEditor and %Toolbar
+│   │   ├── header_row.gd/.tscn            # Column headers with sort indicators
+│   │   ├── resource_row.gd/.tscn          # One row per resource (binds to a ResourceRowVM)
+│   │   ├── resource_field_label.gd/.tscn  # One property cell
+│   │   ├── header_field_label.tscn
+│   │   └── field_separator.tscn
+│   ├── pagination_bar/pagination_bar.gd/.tscn
+│   ├── status_label.gd                    # Script-only Label: resource count / selection count
 │   └── dialogs/
-│       ├── dialogs.gd/.tscn            # Container: wires VMs into the three dialog nodes
-│       ├── save_resource_dialog.gd      # EditorFileDialog for creating new resources
-│       ├── confirm_delete_dialog.gd     # ConfirmationDialog for deleting resources (moves to OS trash)
-│       └── error_dialog.gd             # AcceptDialog for error messages
-└── plugin.cfg
+│       ├── dialogs.gd/.tscn               # Container: forwards VMs into the three dialogs
+│       ├── save_resource_dialog.gd        # EditorFileDialog (script-only node)
+│       ├── confirm_delete_dialog.gd       # ConfirmationDialog (script-only node)
+│       └── error_dialog.gd                # AcceptDialog (script-only node)
+└── docs/
 ```
 
-## Data Flow
+## Peer Dependency: FileSystemMonitor
 
-### Model layer
+Live refresh consumes `DH_FSM_ChangeSet`s from the **FileSystemMonitor** addon
+(`DH_FileSystemMonitorPlugin.instance`). `resource_repository.gd` references its
+classes at parse time, so the plugin only compiles when the monitor is installed.
+`visual_resources_editor_plugin.gd` checks the global class list on enable and
+`push_error`s with the repo URL if it is missing.
 
-- **`SessionStateModel`** owns all shared session state: `selected_class`,
-  `include_subclasses`, `selected_resources`, `current_page`. It emits typed
-  signals when any property changes. This replaces VM-to-VM dependencies — VMs
-  read session state from the Model, not from each other.
+## Model Layer
 
-- **`VREModel`** is the single facade all ViewModels talk to. It instantiates
-  and coordinates `ClassRegistry`, `ResourceRepository`, `SelectionManager`,
-  `PaginationManager`, and `SessionStateModel`. Filesystem change events come
-  from the FileSystemMonitor plugin (`DH_FileSystemMonitorPlugin.instance`),
-  which `ResourceRepository` subscribes to.
-  Internal coordination (e.g. class change → resource reload) happens inside
-  `VREModel`, invisible to VMs.
+- **`DH_VRE_ResourceRepository`** is the hub. It owns `selected_class` and
+  `include_subclasses` (setters trigger `_reload()`), holds
+  `current_class_resources`, and exposes CRUD:
+  - `create(script, path)` — `script.new()` + `ResourceSaver.save()`
+  - `request_delete(paths)` → `confirmation_needed` → `delete(paths)` (OS trash)
+  - `save_one(path, resource)` / `save_multi(entries)` — all disk writes go
+    through the repository, which emits `resources_saved` / `error_occurred`.
+  - **Live refresh**: subscribes to the monitor's `changes_detected` and maps
+    created/modified/deleted/moved files onto add/remove/modify deltas
+    (`resources_changed`) — no rescan, no mtime cache. On
+    `script_classes_updated` it rebuilds the class map, follows class renames
+    by script path, clears the selection when the class is deleted, and resaves
+    resources whose class was removed (orphan cleanup).
+- **`DH_VRE_ResourceClassMap`** builds name→path and name→parent maps from
+  `ProjectSettings.get_global_class_list()` (Resource descendants outside
+  `addons/` only) and extracts editor-visible `DH_VRE_ResourceProperty` lists
+  from scripts.
+- **`DH_VRE_ProjectClassScanner`** (static) walks `EditorFileSystemDirectory`
+  and matches `.tres` files by the `script_class` header, skipping
+  `res://addons/`.
+- **`DH_VRE_ResourceSorter`** (static) sorts by column with type-aware
+  comparison; nulls sort last, resource path is the tiebreak.
+- **`DH_VRE_BulkEditor`** (Node inside `resource_list.tscn`) drives Godot's
+  `EditorInspector`: it builds a proxy Resource from the selection's common
+  script, shows it via `EditorInterface.inspect_object()`, and on
+  `property_edited` copies the value to every selected resource. Writes are
+  debounced through `%SaveDebounceTimer` and flushed via
+  `resource_repo.save_multi()`. It connects directly to the repository and
+  selection manager — it has no View, so it has no ViewModel.
 
-- **`BulkEditor`** is a Model-layer service that drives Godot's
-  `EditorInspector`. It connects directly to `VREModel` (no ViewModel) because
-  it has no View that binds to it. See `architecture_analisys.md §J`.
+## ViewModel Layer
 
-### ViewModel layer
+All VMs are `RefCounted` and depend only on the repository (and what it
+exposes). `DH_VRE_ResourceListVM` is the largest: it composes a
+`SelectionManager` and `PaginationManager`, applies the sorter, reconciles
+selection on data changes, and emits UI-shaped signals (`rows_replaced`,
+`columns_changed`, `sort_state_changed`, `pagination_state_changed`,
+`status_text_changed`). It creates one `DH_VRE_ResourceRowVM` per visible row
+and **pushes** selection state into rows (`set_selected_state`) — rows do not
+subscribe to global selection.
 
-Each VM is a `RefCounted` created by `VisualResourcesEditorWindow` and injected
-into its paired View. VMs expose clean, UI-ready properties/signals and delegate
-all writes back to `VREModel`. VMs never hold references to other VMs.
+Two intentional deviations from "the window creates every VM":
 
-### View layer
+- `DH_VRE_ToolbarVM` is created by `ResourceList._connect_vm()`, because it
+  needs the list VM's `SelectionManager`.
+- `DH_VRE_SaveResourceDialogVM` takes that `toolbar_vm` to react to
+  `create_requested`.
 
-Views are `@tool` scenes/scripts. Each View has a typed `vm` property (setter
-pattern with `is_node_ready()` guard). `VisualResourcesEditorWindow._ready()`
-creates all VMs and assigns them:
+## View Layer
+
+Views are `@tool` scripts using `%UniqueNode` references. Each has a typed `vm`
+property with the setter + `is_node_ready()` guard pattern, so wiring works
+regardless of ready order. `DH_VRE_Window` is the composition root:
 
 ```gdscript
-%ClassSelector.vm    = ClassSelectorVM.new(_state.model)
-%SubclassFilter.vm   = SubclassFilterVM.new(_state.model)
-%Toolbar.vm          = ToolbarVM.new(_state.model)
-%PaginationBar.vm    = PaginationBarVM.new(_state.model)
-%StatusLabel.vm      = StatusLabelVM.new(_state.model)
-%ResourceList.vm     = ResourceListVM.new(_state.model)
-%BulkEditor.model    = _state.model          # direct — no VM needed
-%Dialogs.save_dialog_vm    = SaveResourceDialogVM.new(_state.model)
-%Dialogs.confirm_delete_vm = ConfirmDeleteDialogVM.new(_state.model)
-%Dialogs.error_dialog_vm   = ErrorDialogVM.new(_state.model)
+func _ready() -> void:
+	_resource_repo = DH_VRE_ResourceRepository.new()
+
+	%ClassSelector.vm = DH_VRE_ClassSelectorVM.new(_resource_repo)
+	%SubclassFilter.vm = DH_VRE_SubclassFilterVM.new(_resource_repo)
+	%ResourceList.vm = DH_VRE_ResourceListVM.new(_resource_repo)
+
+	%Dialogs.save_dialog_vm = DH_VRE_SaveResourceDialogVM.new(_resource_repo, %ResourceList.toolbar_vm)
+	%Dialogs.confirm_delete_vm = DH_VRE_ConfirmDeleteDialogVM.new(_resource_repo)
+	%Dialogs.error_dialog_vm = DH_VRE_ErrorDialogVM.new(_resource_repo)
+
+	_resource_repo.start()
 ```
 
-`ResourceListVM` creates one `ResourceRowVM` per resource; `ResourceRow` (View)
-receives and binds to its row VM directly.
+`start()` connects the repository to the monitor; `stop()` (on window close)
+disconnects it.
 
-## Design Decisions
+## Signal Flow
 
-### SessionStateModel vs VM-to-VM dependencies
-Five VMs originally depended on `ClassSelector VM → Selected Class` — a
-horizontal coupling that violates MVVM. Extracting shared session state into
-`SessionStateModel` (Model layer) eliminated all VM-to-VM arrows. See
-`architecture_analisys.md §I`.
+```text
+Monitor ChangeSet
+  → ResourceRepository filters to watched classes, applies deltas
+  → resources_changed / resources_reseted
+  → ResourceListVM: sort → reconcile selection → re-page
+  → rows_replaced → ResourceList rebuilds row scenes
 
-### BulkEditor connects directly to VREModel
-`BulkEditor` is a non-visual service; a `BulkEditVM` wrapper would be pure
-passthrough. See `architecture_analisys.md §J`.
+Row click → RowVM.select() → ListVM.handle_row_click() → SelectionManager
+  → selection_changed → ListVM pushes is_selected into RowVMs
+  → BulkEditor rebuilds the inspector proxy
 
-### ResourceRowVM (per-row ViewModels)
-`ResourceListVM` emits `Array[ResourceRowVM]`; each `ResourceRow` binds to
-its own VM. Selection state is handled per-row via `is_selected_changed` —
-no global selection sweep needed. See `architecture_analisys.md §K`.
-
-### Scene Unique Nodes (`%NodeName`)
-All child node references use `%UniqueNode` directly in code per CLAUDE.md.
-
-### Delete Moves to OS Trash
-`ConfirmDeleteDialog` uses `OS.move_to_trash()`. No undo/redo — version
-control is the recovery path.
-
----
-
-## Diagrams & Information Flow
-
-### 1. High-Level MVVM Flow
+Inspector edit → BulkEditor applies to selected resources (debounced)
+  → repository.save_multi() → resources_saved → row display refresh
+```
 
 ```mermaid
 flowchart LR
@@ -150,24 +162,22 @@ flowchart LR
     classDef view   fill:#dcfce7,stroke:#16a34a,color:#111827
     classDef auto   fill:#fee2e2,stroke:#dc2626,color:#111827
 
-    FS["Filesystem / Editor Events"]:::auto
+    FSM["FileSystemMonitor ChangeSets"]:::auto
 
     subgraph Model
-        VREModel:::model
-        Session["SessionStateModel"]:::model
-        Registry["ClassRegistry"]:::model
         Repo["ResourceRepository"]:::model
+        Map["ResourceClassMap"]:::model
+        Sel["SelectionManager"]:::model
+        Pag["PaginationManager"]:::model
         Bulk["BulkEditor"]:::model
     end
 
     subgraph ViewModels
+        ListVM["ResourceListVM"]:::vm
+        RowVM["ResourceRowVM"]:::vm
+        ToolbarVM:::vm
         ClassSelectorVM:::vm
         SubclassFilterVM:::vm
-        ToolbarVM:::vm
-        ResourceListVM:::vm
-        ResourceRowVM:::vm
-        PaginationBarVM:::vm
-        StatusLabelVM:::vm
         SaveVM["SaveResourceDialogVM"]:::vm
         DeleteVM["ConfirmDeleteDialogVM"]:::vm
         ErrorVM["ErrorDialogVM"]:::vm
@@ -181,54 +191,63 @@ flowchart LR
         ResourceRow:::view
         PaginationBar:::view
         StatusLabel:::view
-        SaveDialog["SaveResourceDialog"]:::view
-        DeleteDialog["ConfirmDeleteDialog"]:::view
-        ErrorDialog:::view
+        Dialogs:::view
     end
 
-    FS --> VREModel
-    VREModel --> ClassSelectorVM
-    VREModel --> SubclassFilterVM
-    VREModel --> ToolbarVM
-    VREModel --> ResourceListVM
-    VREModel --> PaginationBarVM
-    VREModel --> StatusLabelVM
-    VREModel --> SaveVM
-    VREModel --> DeleteVM
-    VREModel --> ErrorVM
-    VREModel --> Bulk
+    FSM --> Repo
+    Repo --> Map
+    Repo --> ListVM
+    Repo --> ClassSelectorVM
+    Repo --> SubclassFilterVM
+    Repo --> ToolbarVM
+    Repo --> SaveVM
+    Repo --> DeleteVM
+    Repo --> ErrorVM
+    Sel --> ListVM
+    Pag --> ListVM
+    Repo --> Bulk
+    Sel --> Bulk
 
+    ListVM --> RowVM
+    ListVM --> ResourceList
+    ListVM --> PaginationBar
+    ListVM --> StatusLabel
+    RowVM --> ResourceRow
+    ToolbarVM --> Toolbar
     ClassSelectorVM --> ClassSelector
     SubclassFilterVM --> SubclassFilter
-    ToolbarVM --> Toolbar
-    ResourceListVM --> ResourceList
-    ResourceListVM --> ResourceRowVM
-    ResourceRowVM --> ResourceRow
-    PaginationBarVM --> PaginationBar
-    StatusLabelVM --> StatusLabel
-    SaveVM --> SaveDialog
-    DeleteVM --> DeleteDialog
-    ErrorVM --> ErrorDialog
-
-    ClassSelector -.-> ClassSelectorVM
-    SubclassFilter -.-> SubclassFilterVM
-    Toolbar -.-> ToolbarVM
-    ResourceRow -.-> ResourceRowVM
-    PaginationBar -.-> PaginationBarVM
-    SaveDialog -.-> SaveVM
-    DeleteDialog -.-> DeleteVM
+    SaveVM --> Dialogs
+    DeleteVM --> Dialogs
+    ErrorVM --> Dialogs
 ```
 
-### 2. Window Dependency Injection
+## Design Decisions
 
-`VisualResourcesEditorWindow._ready()` is the only place that knows about both
-`VREStateManager` (which holds `VREModel`) and the child Views. It creates each
-VM and passes `_state.model` into it, then assigns the VM to the View. After
-`_ready()` finishes, no component holds a reference to any other component.
+### Repository as the Model hub (no facade)
+Earlier iterations had a `VREStateManager` proxy and a `VREModel` facade; both
+were removed. ViewModels talk to `DH_VRE_ResourceRepository` directly, which
+keeps the call stack at View → VM → Repository → helper.
 
----
+### Incremental refresh over rescanning
+The repository consumes already-computed ChangeSets from FileSystemMonitor
+instead of maintaining its own mtime cache and rescanning `res://`. Full scans
+only happen on class/filter change.
 
-## Analysis
+### BulkEditor connects directly to the Model
+It is a non-visual service; a `BulkEditVM` wrapper would be pure passthrough.
 
-The detailed design-analysis material is in `architecture_analisys.md`.
-Resolved implementation decisions are documented in sections I–L of that file.
+### Per-row ViewModels with pushed selection
+`ResourceListVM` emits `Array[ResourceRowVM]` and pushes `is_selected` state
+into the affected rows. Rows never subscribe to global signals, so replaced
+rows cannot leak connections.
+
+### Debounced saves
+`property_edited` fires per keystroke; `BulkEditor` batches writes behind
+`%SaveDebounceTimer` and flushes on pause, selection change, or window close.
+
+### Scene Unique Nodes (`%NodeName`)
+All child node references use `%UniqueNode` directly in code per CLAUDE.md.
+
+### Delete moves to OS trash
+`ResourceRepository.delete()` uses `OS.move_to_trash()`. No undo/redo —
+version control is the recovery path.
