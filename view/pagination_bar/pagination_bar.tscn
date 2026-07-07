@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://bldm4qh2872bh"]
 
-[ext_resource type="Script" uid="uid://pejiwgujf1b5" path="res://addons/diablohumastudio_framework/visual_resources_editor/ui/pagination_bar/pagination_bar.gd" id="1_pg"]
+[ext_resource type="Script" uid="uid://pejiwgujf1b5" path="res://addons/diablohumastudio_framework/visual_resources_editor/view/pagination_bar/pagination_bar.gd" id="1_pg"]
 
 [node name="PaginationBar" type="HBoxContainer" unique_id=668469544]
 visible = false

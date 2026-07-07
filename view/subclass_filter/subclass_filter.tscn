@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://30l0lcaeamld"]
 
-[ext_resource type="Script" uid="uid://crql5cw1wuidp" path="res://addons/diablohumastudio_framework/visual_resources_editor/ui/subclass_filter/subclass_filter.gd" id="1_sf"]
+[ext_resource type="Script" uid="uid://crql5cw1wuidp" path="res://addons/diablohumastudio_framework/visual_resources_editor/view/subclass_filter/subclass_filter.gd" id="1_sf"]
 
 [node name="SubclassFilter" type="VBoxContainer" unique_id=1796888213]
 custom_minimum_size = Vector2(250, 49)
