@@ -3,6 +3,18 @@
 [ext_resource type="Script" uid="uid://18g175aa53mwm" path="res://addons/diablohumastudio_framework/visual_resources_editor/view/resource_list/column_grip.gd" id="1_grip"]
 
 [node name="ColumnGrip" type="VSeparator"]
-custom_minimum_size = Vector2(8, 0)
-mouse_default_cursor_shape = 10
+custom_minimum_size = Vector2(1, 0)
+mouse_filter = 2
 script = ExtResource("1_grip")
+
+[node name="GrabArea" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -5.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_default_cursor_shape = 10
+
+[connection signal="gui_input" from="GrabArea" to="." method="_on_grab_area_gui_input"]

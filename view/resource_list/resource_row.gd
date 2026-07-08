@@ -5,6 +5,12 @@ extends Button
 const RESOURCE_FIELD_LABEL_SCENE: PackedScene = preload("uid://bgtsclwqqu255")
 const FIELD_SEPARATOR_SCENE: PackedScene = preload("uid://bu4cm5ri3fy8l")
 
+## Turquoise row tints; same hue, contrast comes from the alpha spread
+## (a darker color over a dark editor theme reads as nearly no difference).
+## Translucent so selection/hover styleboxes stay visible underneath.
+const COLUMN_TINT_EVEN: Color = Color(0.2, 0.8, 0.75, 0.3)
+const COLUMN_TINT_ODD: Color = Color(0.2, 0.8, 0.75, 0.12)
+
 var vm: DH_VRE_ResourceRowVM = null
 var current_shared_property_list: Array[DH_VRE_ResourceProperty] = []
 var _prop_labels: Dictionary = {}
@@ -13,6 +19,7 @@ var _column_widths: Dictionary = {}
 
 
 func _ready() -> void:
+	_tint_file_name_label()
 	if not vm: return
 	vm.is_selected_changed.connect(set_selected)
 	%FileNameLabel.text = vm.resource.resource_path.get_file()
@@ -46,6 +53,7 @@ func _build_field_labels() -> void:
 			%FieldsContainer.add_child(sep)
 
 		var label: DH_VRE_ResourceFieldLabel = RESOURCE_FIELD_LABEL_SCENE.instantiate()
+		label.column_tint = COLUMN_TINT_EVEN if (i + 1) % 2 == 0 else COLUMN_TINT_ODD   # +1: File is column 0
 		var col_name: String = current_shared_property_list[i].name
 		if owned.has(col_name):
 			_prop_labels[col_name] = label
@@ -58,6 +66,14 @@ func _build_field_labels() -> void:
 
 func rebuild_fields() -> void:
 	_build_field_labels()
+
+
+func _tint_file_name_label() -> void:
+	var style: StyleBoxFlat = %FileNameLabel.get_theme_stylebox("normal").duplicate() as StyleBoxFlat
+	if style == null:
+		return
+	style.bg_color = COLUMN_TINT_EVEN
+	%FileNameLabel.add_theme_stylebox_override("normal", style)
 
 
 func apply_column_widths(widths: Dictionary) -> void:

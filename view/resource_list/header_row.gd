@@ -7,6 +7,11 @@ const COLUMN_GRIP_SCENE: PackedScene = preload("uid://dmrrxxh827aso")
 const ARROW_UP: String = " ↑"
 const ARROW_DOWN: String = " ↓"
 
+## Light-blue header tints; odd columns slightly darker than even ones.
+## Translucent so the theme hover/pressed feedback stays visible.
+const COLUMN_TINT_EVEN: Color = Color(0.45, 0.65, 0.9, 0.5)
+const COLUMN_TINT_ODD: Color = Color(0.32, 0.5, 0.72, 0.5)
+
 var _vm: DH_VRE_ResourceListVM = null
 var _field_buttons: Array[Button] = []
 var _column_names: Array[String] = []
@@ -17,6 +22,10 @@ var current_shared_property_list: Array[DH_VRE_ResourceProperty] = []:
 		current_shared_property_list = value
 		if is_inside_tree():
 			_rebuild_labels()
+
+
+func _ready() -> void:
+	_tint_column_button(%FileLabel, 0)
 
 
 func set_view_model(vm: DH_VRE_ResourceListVM) -> void:
@@ -44,6 +53,7 @@ func _rebuild_labels() -> void:
 		var btn: Button = HEADER_FIELD_LABEL_SCENE.instantiate()
 		btn.text = col_name
 		%FieldsContainer.add_child(btn)
+		_tint_column_button(btn, i + 1)   # +1: the File column is index 0
 		_field_buttons.append(btn)
 		_column_names.append(col_name)
 		if _vm:
@@ -69,6 +79,19 @@ func _connect_grip(grip: DH_VRE_ColumnGrip, column_getter: Callable) -> void:
 		_drag_start_width = _vm.get_column_width(column_getter.call()))
 	grip.drag_delta.connect(func(delta: float) -> void:
 		_vm.set_column_width(column_getter.call(), _drag_start_width + delta))
+
+
+## Same stylebox for every interaction state: header cells keep their column
+## tint on hover/press; the pointing-hand cursor (set in the scenes) is the
+## click-to-sort affordance instead.
+func _tint_column_button(btn: Button, column_index: int) -> void:
+	var tint: Color = COLUMN_TINT_EVEN if column_index % 2 == 0 else COLUMN_TINT_ODD
+	var style: StyleBoxFlat = btn.get_theme_stylebox("normal").duplicate() as StyleBoxFlat
+	if style == null:
+		return
+	style.bg_color = tint
+	for state: String in ["normal", "hover", "pressed", "hover_pressed"]:
+		btn.add_theme_stylebox_override(state, style)
 
 
 func _last_column_name() -> String:

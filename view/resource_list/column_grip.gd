@@ -11,7 +11,9 @@ var _dragging: bool = false
 var _drag_start_mouse_x: float = 0.0
 
 
-func _gui_input(event: InputEvent) -> void:
+## The visible separator is 1 px; %GrabArea is an invisible overlay extending
+## 5 px left over the column it resizes, so the grip stays easy to grab.
+func _on_grab_area_gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		_dragging = event.pressed
 		if _dragging:

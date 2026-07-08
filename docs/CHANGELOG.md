@@ -13,6 +13,14 @@ here with their original numbers; those files track open items only.
 - Docs cleanup: removed superseded analysis/proposal documents; rewrote
   `ARCHITECTURE.md` against the current code; `FIXES.md` and `TODOS.md` now
   track open items only, resolved items move to this changelog.
+- **Table restyle**: header cells tinted light blue, row cells turquoise, with
+  odd/even columns alternating via alpha spread (translucent tints so
+  selection/hover still shows). Header cells keep their tint on hover/press —
+  a pointing-hand cursor signals click-to-sort instead. Row cells fill the
+  full row height (Labels default to vertical shrink-center). Column dividers
+  are now a bare 1 px line (box separations 0); header grips keep a ~6 px
+  invisible grab overlay extending over the column's right edge, so resizing
+  stays easy. Cells keep a 4 px internal text padding.
 
 ### Added
 - **Resizable columns**: header separators are now drag grips (`column_grip`)

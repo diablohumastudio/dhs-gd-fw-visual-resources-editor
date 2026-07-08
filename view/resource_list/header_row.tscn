@@ -5,15 +5,16 @@
 
 [node name="HeaderRow" type="HBoxContainer" unique_id=1501631782]
 custom_minimum_size = Vector2(0, 24)
+theme_override_constants/separation = 0
 script = ExtResource("1_hdr")
 
 [node name="FileLabel" type="Button" parent="." unique_id=839752079]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(150, 0)
 layout_mode = 2
+mouse_default_cursor_shape = 2
 theme_override_font_sizes/font_size = 12
 text = "File"
-flat = true
 alignment = 0
 clip_text = true
 
@@ -24,6 +25,7 @@ layout_mode = 2
 [node name="FieldsContainer" type="HBoxContainer" parent="." unique_id=2079411122]
 unique_name_in_owner = true
 layout_mode = 2
+theme_override_constants/separation = 0
 
 [node name="DelGrip" parent="." instance=ExtResource("2_grip")]
 unique_name_in_owner = true

@@ -4,9 +4,14 @@
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_a1hcq"]
 resource_local_to_scene = true
+content_margin_left = 4.0
+content_margin_right = 4.0
+bg_color = Color(0, 0, 0, 0)
 
 [node name="ResourceFieldLabel" type="Label" unique_id=1347856230]
+size_flags_vertical = 1
 theme_override_styles/normal = SubResource("StyleBoxFlat_a1hcq")
+vertical_alignment = 1
 clip_text = true
 text_overrun_behavior = 3
 script = ExtResource("1_rfl")
