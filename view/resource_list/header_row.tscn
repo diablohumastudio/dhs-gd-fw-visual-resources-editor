@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://b7xqwt52kxrun"]
 
 [ext_resource type="Script" uid="uid://cy8av2sb1s45j" path="res://addons/diablohumastudio_framework/visual_resources_editor/view/resource_list/header_row.gd" id="1_hdr"]
+[ext_resource type="PackedScene" uid="uid://dmrrxxh827aso" path="res://addons/diablohumastudio_framework/visual_resources_editor/view/resource_list/column_grip.tscn" id="2_grip"]
 
 [node name="HeaderRow" type="HBoxContainer" unique_id=1501631782]
 custom_minimum_size = Vector2(0, 24)
@@ -10,25 +11,29 @@ script = ExtResource("1_hdr")
 unique_name_in_owner = true
 custom_minimum_size = Vector2(150, 0)
 layout_mode = 2
-size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 12
 text = "File"
 flat = true
 alignment = 0
 clip_text = true
 
-[node name="ColSep" type="VSeparator" parent="." unique_id=1885714394]
+[node name="FileGrip" parent="." instance=ExtResource("2_grip")]
+unique_name_in_owner = true
 layout_mode = 2
 
 [node name="FieldsContainer" type="HBoxContainer" parent="." unique_id=2079411122]
 unique_name_in_owner = true
 layout_mode = 2
-size_flags_horizontal = 3
-size_flags_stretch_ratio = 3.0
 
-[node name="DelSep" type="VSeparator" parent="." unique_id=1709057572]
+[node name="DelGrip" parent="." instance=ExtResource("2_grip")]
+unique_name_in_owner = true
 layout_mode = 2
 
-[node name="DelSpacer" type="Control" parent="." unique_id=548712155]
+[node name="DelSpacer" type="Button" parent="."]
+modulate = Color(1, 1, 1, 0)
 custom_minimum_size = Vector2(28, 0)
 layout_mode = 2
+focus_mode = 0
+mouse_filter = 2
+text = "X"
+flat = true

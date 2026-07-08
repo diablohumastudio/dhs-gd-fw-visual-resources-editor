@@ -41,9 +41,10 @@ visual_resources_editor/
 │   ├── toolbar/toolbar.gd/.tscn
 │   ├── resource_list/
 │   │   ├── resource_list.gd/.tscn         # Table container; hosts %BulkEditor and %Toolbar
-│   │   ├── header_row.gd/.tscn            # Column headers with sort indicators
+│   │   ├── header_row.gd/.tscn            # Column headers with sort indicators + resize grips
 │   │   ├── resource_row.gd/.tscn          # One row per resource (binds to a ResourceRowVM)
 │   │   ├── resource_field_label.gd/.tscn  # One property cell
+│   │   ├── column_grip.gd/.tscn           # Draggable header separator: emits resize drags
 │   │   ├── header_field_label.tscn
 │   │   └── field_separator.tscn
 │   ├── pagination_bar/pagination_bar.gd/.tscn

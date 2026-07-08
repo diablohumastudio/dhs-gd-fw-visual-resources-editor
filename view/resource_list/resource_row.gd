@@ -2,12 +2,14 @@
 class_name DH_VRE_ResourceRow
 extends Button
 
-const RESOURCE_FIELD_LABEL_SCENE: PackedScene = preload("uid://uru49vi0kvgxy")
-const FIELD_SEPARATOR_SCENE: PackedScene = preload("uid://y2kj6h91hm8r6")
+const RESOURCE_FIELD_LABEL_SCENE: PackedScene = preload("uid://bgtsclwqqu255")
+const FIELD_SEPARATOR_SCENE: PackedScene = preload("uid://bu4cm5ri3fy8l")
 
 var vm: DH_VRE_ResourceRowVM = null
 var current_shared_property_list: Array[DH_VRE_ResourceProperty] = []
 var _prop_labels: Dictionary = {}
+var _field_labels: Array[DH_VRE_ResourceFieldLabel] = []
+var _column_widths: Dictionary = {}
 
 
 func _ready() -> void:
@@ -21,8 +23,10 @@ func _ready() -> void:
 
 func _build_field_labels() -> void:
 	for child: Node in %FieldsContainer.get_children():
+		child.visible = false   # queue_free is deferred; hide so HBox min-size ignores it now
 		child.queue_free()
 	_prop_labels.clear()
+	_field_labels.clear()
 
 	var owned: Dictionary = {}
 	if vm.resource and vm.resource.get_script():
@@ -47,10 +51,36 @@ func _build_field_labels() -> void:
 			_prop_labels[col_name] = label
 			label.set_value(vm.resource, current_shared_property_list[i])
 		%FieldsContainer.add_child(label)
+		_field_labels.append(label)
+
+	_apply_column_widths()
 
 
 func rebuild_fields() -> void:
 	_build_field_labels()
+
+
+func apply_column_widths(widths: Dictionary) -> void:
+	_column_widths = widths
+	if is_node_ready():
+		_apply_column_widths()
+
+
+func _apply_column_widths() -> void:
+	if _column_widths.is_empty():
+		return
+	%FileNameLabel.custom_minimum_size.x = _column_widths.get(
+		DH_VRE_ResourceListVM.FILE_COLUMN, DH_VRE_ResourceListVM.DEFAULT_FILE_COLUMN_WIDTH)
+	for i: int in _field_labels.size():
+		_field_labels[i].custom_minimum_size.x = _column_widths.get(
+			current_shared_property_list[i].name, DH_VRE_ResourceListVM.DEFAULT_COLUMN_WIDTH)
+	_update_row_min_width()
+
+
+## The row is a Button, not a container: it does not inherit its anchored
+## Content's minimum size, so horizontal scrolling needs it set explicitly.
+func _update_row_min_width() -> void:
+	custom_minimum_size.x = %Content.get_combined_minimum_size().x
 
 
 func update_display() -> void:

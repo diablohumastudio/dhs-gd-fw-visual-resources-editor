@@ -17,7 +17,7 @@ the filtering in `ResourceClassMap.get_properties_from_script_path()`.
 provides ready-to-render cell data, the View blindly renders it.
 
 **References:**
-- `view/resource_list/resource_row.gd:22-49`
+- `view/resource_list/resource_row.gd:24-57`
 - `model/resource_class_map.gd:93-117`
 
 ---
@@ -58,8 +58,8 @@ bulk-editing can write the wrong type.
 instead of destroying.
 
 **References:**
-- `view/resource_list/resource_list.gd:49-52,79-85`
-- `view/resource_list/resource_row.gd:22-49`
+- `view/resource_list/resource_list.gd:64-67,95-101`
+- `view/resource_list/resource_row.gd:24-57`
 
 ---
 
@@ -71,7 +71,7 @@ reads it. Ghost feature.
 **Fix:** Remove until search is actually implemented.
 
 **References:**
-- `viewmodel/resource_list_vm.gd:20`
+- `viewmodel/resource_list_vm.gd:28`
 
 ---
 

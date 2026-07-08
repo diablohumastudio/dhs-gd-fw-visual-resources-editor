@@ -16,11 +16,18 @@ var _rows: Array[DH_VRE_ResourceRow] = []
 var _resource_path_to_row: Dictionary[String, DH_VRE_ResourceRow] = {}
 var _resource_path_to_row_vm: Dictionary[String, DH_VRE_ResourceRowVM] = {}
 var _current_shared_property_list: Array[DH_VRE_ResourceProperty] = []
+var _current_column_widths: Dictionary = {}
 
 
 func _ready() -> void:
 	if vm:
 		_connect_vm()
+	%RowsScroll.get_h_scroll_bar().value_changed.connect(_on_rows_h_scroll_changed)
+
+
+## Keeps the frozen header horizontally aligned with the scrolling rows.
+func _on_rows_h_scroll_changed(value: float) -> void:
+	%HeaderScroll.scroll_horizontal = int(value)
 
 
 func _connect_vm() -> void:
@@ -30,6 +37,7 @@ func _connect_vm() -> void:
 	%BulkEditor.selection_manager = vm.selection_manager
 	%BulkEditor.resource_repo = vm.resource_repo
 	vm.columns_changed.connect(_on_columns_changed)
+	vm.column_widths_changed.connect(_on_column_widths_changed)
 	vm.rows_replaced.connect(_on_rows_replaced)
 	vm.rows_edited.connect(_on_rows_edited)
 	%HeaderRow.set_view_model(vm)
@@ -44,6 +52,13 @@ func _on_columns_changed(columns: Array[DH_VRE_ResourceProperty]) -> void:
 		if is_instance_valid(row):
 			row.current_shared_property_list = columns
 			row.rebuild_fields()
+
+
+func _on_column_widths_changed(widths: Dictionary) -> void:
+	_current_column_widths = widths
+	for row: DH_VRE_ResourceRow in _rows:
+		if is_instance_valid(row):
+			row.apply_column_widths(widths)
 
 
 func _on_rows_replaced(rows: Array[DH_VRE_ResourceRowVM]) -> void:
@@ -70,6 +85,7 @@ func _add_row(row_vm: DH_VRE_ResourceRowVM) -> void:
 	var row: DH_VRE_ResourceRow = RESOURCE_ROW_SCENE.instantiate()
 	row.vm = row_vm
 	row.current_shared_property_list = _current_shared_property_list
+	row.apply_column_widths(_current_column_widths)
 	%RowsContainer.add_child(row)
 	_rows.append(row)
 	_resource_path_to_row[path] = row

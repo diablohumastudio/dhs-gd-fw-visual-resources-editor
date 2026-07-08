@@ -22,15 +22,23 @@ layout_mode = 2
 [node name="HSeparator" type="HSeparator" parent="." unique_id=1318354167]
 layout_mode = 2
 
-[node name="HeaderRow" parent="." unique_id=232825132 instance=ExtResource("4_hdr")]
+[node name="HeaderScroll" type="ScrollContainer" parent="."]
 unique_name_in_owner = true
 layout_mode = 2
+horizontal_scroll_mode = 3
+vertical_scroll_mode = 0
 
-[node name="ScrollContainer" type="ScrollContainer" parent="." unique_id=712941535]
+[node name="HeaderRow" parent="HeaderScroll" unique_id=232825132 instance=ExtResource("4_hdr")]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="RowsScroll" type="ScrollContainer" parent="." unique_id=712941535]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="RowsContainer" type="VBoxContainer" parent="ScrollContainer" unique_id=277112444]
+[node name="RowsContainer" type="VBoxContainer" parent="RowsScroll" unique_id=277112444]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3

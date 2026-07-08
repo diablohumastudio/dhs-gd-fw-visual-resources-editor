@@ -35,6 +35,7 @@ alignment = 0
 script = ExtResource("1_row")
 
 [node name="Content" type="HBoxContainer" parent="." unique_id=2044781920]
+unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -47,22 +48,23 @@ mouse_filter = 2
 unique_name_in_owner = true
 custom_minimum_size = Vector2(150, 0)
 layout_mode = 2
-size_flags_horizontal = 3
 clip_text = true
 text_overrun_behavior = 3
 
 [node name="ColSep" type="VSeparator" parent="Content" unique_id=1874053454]
+custom_minimum_size = Vector2(8, 0)
 layout_mode = 2
+mouse_filter = 2
 
 [node name="FieldsContainer" type="HBoxContainer" parent="Content" unique_id=1344206157]
 unique_name_in_owner = true
 layout_mode = 2
-size_flags_horizontal = 3
-size_flags_stretch_ratio = 3.0
 mouse_filter = 2
 
 [node name="DelSep" type="VSeparator" parent="Content" unique_id=1309653384]
+custom_minimum_size = Vector2(8, 0)
 layout_mode = 2
+mouse_filter = 2
 
 [node name="DeleteBtn" type="Button" parent="Content" unique_id=841477081]
 unique_name_in_owner = true

@@ -5,9 +5,15 @@ extends RefCounted
 signal rows_replaced(rows: Array[DH_VRE_ResourceRowVM])
 signal rows_edited(resources: Array[Resource])
 signal columns_changed(columns: Array[DH_VRE_ResourceProperty])
+signal column_widths_changed(widths: Dictionary)
 signal sort_state_changed(column: String, ascending: bool)
 signal pagination_state_changed(page: int, total_pages: int)
 signal status_text_changed(visible_count: int, selected_count: int)
+
+const FILE_COLUMN: String = ""
+const MIN_COLUMN_WIDTH: float = 40.0
+const DEFAULT_FILE_COLUMN_WIDTH: float = 200.0
+const DEFAULT_COLUMN_WIDTH: float = 120.0
 
 var resource_repo: DH_VRE_ResourceRepository
 var selection_manager: DH_VRE_SelectionManager
@@ -15,6 +21,8 @@ var _pagination: DH_VRE_PaginationManager
 
 var rows: Array[DH_VRE_ResourceRowVM] = []
 var visible_columns: Array[DH_VRE_ResourceProperty] = []
+var column_widths: Dictionary[String, float] = {}
+var _widths_class: String = ""
 var sort_column: String = ""
 var sort_ascending: bool = true
 var search_filter: String = ""
@@ -53,6 +61,18 @@ func set_sort(column: String, ascending: bool) -> void:
 	selection_manager.reconcile(resource_repo.get_paths())
 	_pagination.reset(resource_repo.current_class_resources)
 	_emit_page_state()
+
+
+func set_column_width(column: String, width: float) -> void:
+	var clamped_width: float = maxf(width, MIN_COLUMN_WIDTH)
+	if column_widths.get(column, 0.0) == clamped_width:
+		return
+	column_widths[column] = clamped_width
+	column_widths_changed.emit(column_widths.duplicate())
+
+
+func get_column_width(column: String) -> float:
+	return column_widths.get(column, DEFAULT_COLUMN_WIDTH)
 
 
 func handle_row_click(path: String, ctrl_held: bool, shift_held: bool) -> void:
@@ -139,7 +159,22 @@ func _rebuild_columns() -> void:
 		selected, resource_repo.include_subclasses)
 	visible_columns = resource_repo.class_registry.get_shared_properties(included)
 	columns_changed.emit(visible_columns)
+	_refresh_column_widths()
 	_validate_sort_column()
+
+
+## Widths reset when the class changes; columns that survive a rebuild
+## (e.g. toggling "Include Subclasses") keep their width, new ones get defaults.
+func _refresh_column_widths() -> void:
+	if _widths_class != resource_repo.selected_class:
+		column_widths.clear()
+		_widths_class = resource_repo.selected_class
+	if not column_widths.has(FILE_COLUMN):
+		column_widths[FILE_COLUMN] = DEFAULT_FILE_COLUMN_WIDTH
+	for prop: DH_VRE_ResourceProperty in visible_columns:
+		if not column_widths.has(prop.name):
+			column_widths[prop.name] = DEFAULT_COLUMN_WIDTH
+	column_widths_changed.emit(column_widths.duplicate())
 
 
 func _apply_sort() -> void:
