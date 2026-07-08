@@ -79,6 +79,7 @@ func _connect_grip(grip: DH_VRE_ColumnGrip, column_getter: Callable) -> void:
 		_drag_start_width = _vm.get_column_width(column_getter.call()))
 	grip.drag_delta.connect(func(delta: float) -> void:
 		_vm.set_column_width(column_getter.call(), _drag_start_width + delta))
+	grip.drag_ended.connect(_vm.commit_column_widths)
 
 
 ## Same stylebox for every interaction state: header cells keep their column

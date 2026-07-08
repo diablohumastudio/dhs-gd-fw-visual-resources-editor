@@ -23,6 +23,7 @@ var rows: Array[DH_VRE_ResourceRowVM] = []
 var visible_columns: Array[DH_VRE_ResourceProperty] = []
 var column_widths: Dictionary[String, float] = {}
 var _widths_class: String = ""
+var _widths_store: DH_VRE_ColumnWidthsStore = null
 var sort_column: String = ""
 var sort_ascending: bool = true
 var search_filter: String = ""
@@ -34,6 +35,7 @@ func _init(presource_repo: DH_VRE_ResourceRepository) -> void:
 	resource_repo = presource_repo
 	selection_manager = DH_VRE_SelectionManager.new()
 	_pagination = DH_VRE_PaginationManager.new()
+	_widths_store = DH_VRE_ColumnWidthsStore.new()
 
 	resource_repo.resources_reseted.connect(_on_resources_reseted)
 	resource_repo.resources_changed.connect(_on_resources_changed)
@@ -73,6 +75,12 @@ func set_column_width(column: String, width: float) -> void:
 
 func get_column_width(column: String) -> float:
 	return column_widths.get(column, DEFAULT_COLUMN_WIDTH)
+
+
+## Persists the current class's widths. Called by the header when a resize
+## drag ends, so dragging doesn't write to disk on every mouse move.
+func commit_column_widths() -> void:
+	_widths_store.save_widths(_widths_class, column_widths)
 
 
 func handle_row_click(path: String, ctrl_held: bool, shift_held: bool) -> void:
@@ -163,11 +171,12 @@ func _rebuild_columns() -> void:
 	_validate_sort_column()
 
 
-## Widths reset when the class changes; columns that survive a rebuild
-## (e.g. toggling "Include Subclasses") keep their width, new ones get defaults.
+## Widths are restored from the per-class store when the class changes;
+## columns without a stored width get defaults. Columns that survive a rebuild
+## (e.g. toggling "Include Subclasses") keep their width.
 func _refresh_column_widths() -> void:
 	if _widths_class != resource_repo.selected_class:
-		column_widths.clear()
+		column_widths = _widths_store.load_widths(resource_repo.selected_class)
 		_widths_class = resource_repo.selected_class
 	if not column_widths.has(FILE_COLUMN):
 		column_widths[FILE_COLUMN] = DEFAULT_FILE_COLUMN_WIDTH

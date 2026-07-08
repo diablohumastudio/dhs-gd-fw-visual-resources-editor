@@ -24,6 +24,7 @@ visual_resources_editor/
 │   ├── resource_sorter.gd                 # Static utility: type-aware column sorting
 │   ├── selection_manager.gd               # Multi-select logic (single / ctrl / shift + anchor)
 │   ├── pagination_manager.gd              # Page arithmetic and page-slice extraction (50/page)
+│   ├── column_widths_store.gd             # Per-class column widths in editor project metadata
 │   ├── bulk_editor.gd                     # Node: inspector proxy + debounced bulk write-back
 │   └── resource_property.gd               # Typed data model for a single property definition
 ├── viewmodel/                              # ViewModel layer (all RefCounted)

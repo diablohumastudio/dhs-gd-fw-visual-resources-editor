@@ -25,9 +25,11 @@ here with their original numbers; those files track open items only.
 ### Added
 - **Resizable columns**: header separators are now drag grips (`column_grip`)
   with an h-resize cursor; widths live in `ResourceListVM.column_widths`
-  (File 200 / fields 120 default, 40 min) and reset when the class changes.
-  The header ends in an invisible ghost of the row delete button so both sides
-  compute identical total widths under any theme. *(resolves TODOS #8)*
+  (File 200 / fields 120 default, 40 min). Widths persist per class via
+  `DH_VRE_ColumnWidthsStore` (editor project metadata — per user, not
+  committed), saved on drag release and restored on class switch. The header
+  ends in an invisible ghost of the row delete button so both sides compute
+  identical total widths under any theme. *(resolves TODOS #8)*
 - **Horizontal scroll** with a frozen header: rows scroll in `%RowsScroll`,
   the header follows in a scrollbar-less `%HeaderScroll` synced in code.
 - `CLAUDE.md` with studio conventions and the docs workflow.
