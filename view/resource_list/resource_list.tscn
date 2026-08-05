@@ -22,7 +22,7 @@ layout_mode = 2
 [node name="HSeparator" type="HSeparator" parent="." unique_id=1318354167]
 layout_mode = 2
 
-[node name="HeaderScroll" type="ScrollContainer" parent="."]
+[node name="HeaderScroll" type="ScrollContainer" parent="." unique_id=116139269]
 unique_name_in_owner = true
 layout_mode = 2
 horizontal_scroll_mode = 3
@@ -59,7 +59,7 @@ unique_name_in_owner = true
 script = ExtResource("3_be")
 metadata/_custom_type_script = "uid://dmco8u3b2nshv"
 
-[node name="SaveDebounceTimer" type="Timer" parent="BulkEditor"]
+[node name="SaveDebounceTimer" type="Timer" parent="BulkEditor" unique_id=930274704]
 unique_name_in_owner = true
 one_shot = true
 

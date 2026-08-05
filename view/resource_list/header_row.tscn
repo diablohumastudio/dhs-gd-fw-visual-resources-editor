@@ -18,7 +18,7 @@ text = "File"
 alignment = 0
 clip_text = true
 
-[node name="FileGrip" parent="." instance=ExtResource("2_grip")]
+[node name="FileGrip" parent="." unique_id=1009712764 instance=ExtResource("2_grip")]
 unique_name_in_owner = true
 layout_mode = 2
 
@@ -27,11 +27,11 @@ unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 0
 
-[node name="DelGrip" parent="." instance=ExtResource("2_grip")]
+[node name="DelGrip" parent="." unique_id=1825109263 instance=ExtResource("2_grip")]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="DelSpacer" type="Button" parent="."]
+[node name="DelSpacer" type="Button" parent="." unique_id=324845263]
 modulate = Color(1, 1, 1, 0)
 custom_minimum_size = Vector2(28, 0)
 layout_mode = 2
